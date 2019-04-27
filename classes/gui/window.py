@@ -123,6 +123,7 @@ class ExplorerWindow(Gtk.FileChooserDialog):
 		response = self.run()
 		if response == Gtk.ResponseType.OK:
 			filename = self.get_filename()
+			# si ya existe, preguntamos
 			if os.path.exists(filename):
 				message_dialog = Gtk.MessageDialog(
 					parent=self,
@@ -136,6 +137,7 @@ class ExplorerWindow(Gtk.FileChooserDialog):
 					"para remplazarlo con el nuevo contenido.")
 				response2 = message_dialog.run()
 				message_dialog.destroy()
+				# entonces, revisamos qué quiere el usuario
 				if response2 == Gtk.ResponseType.NO:
 					message_dialog.destroy()
 					return self.explore()
@@ -143,6 +145,7 @@ class ExplorerWindow(Gtk.FileChooserDialog):
 					self.path = filename
 					message_dialog.destroy()
 					self.destroy()
+					return self.path
 			else:
 				self.path = filename
 				self.destroy()
