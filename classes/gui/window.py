@@ -22,8 +22,6 @@ class MainWindow(Gtk.Window):
 			self.instances += 1
 		# algunos atributos generales
 		self.title = title
-		self.path_output = None
-		self.subprocesses = None
 		# preconfiguración
 		self.set_border_width(10)
 		self.set_default_size(400, 150)
