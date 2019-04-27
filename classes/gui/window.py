@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import gi
+import os
 import subprocess
 
 gi.require_version("Gtk", "3.0")
@@ -100,3 +101,52 @@ class MainWindow(Gtk.Window):
 
 	def on_button_audio_settings(self, widget):
 		pass
+
+class ExplorerWindow(Gtk.FileChooserDialog):
+	"""La ventana del explorador de archivo"""
+	def __init__(self, parent=None):
+		super(ExplorerWindow, self).__init__(
+			parent=parent,
+			title="Guardar en:",
+			action=Gtk.FileChooserAction.SAVE)
+		self.path = None
+		self.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
+		self.add_button(Gtk.STOCK_SAVE_AS, Gtk.ResponseType.OK)
+		self.filter_text = Gtk.FileFilter()
+		self.filter_text.set_name("Archivo de vídeo")
+		self.filter_text.add_mime_type("video/mp4")
+		self.filter_text.add_mime_type("video/mkv")
+		self.filter_text.add_mime_type("video/webm")
+		self.add_filter(self.filter_text)
+
+	def explore(self):
+		response = self.run()
+		if response == Gtk.ResponseType.OK:
+			filename = self.get_filename()
+			if os.path.exists(filename):
+				message_dialog = Gtk.MessageDialog(
+					parent=self,
+					text="El archivo %s ya existe, ¿Quiere sobreescribirlo?" % os.path.basename(filename),
+					use_markup=False,
+					type=Gtk.MessageType.WARNING,
+					buttons=Gtk.ButtonsType.YES_NO,
+					modal=True)
+				message_dialog.format_secondary_text(
+					"Si sobreescribes, todo el contenido del archivo será borrado " +
+					"para remplazarlo con el nuevo contenido.")
+				response2 = message_dialog.run()
+				message_dialog.destroy()
+				if response2 == Gtk.ResponseType.NO:
+					message_dialog.destroy()
+					return self.explore()
+				else:
+					self.path = filename
+					message_dialog.destroy()
+					self.destroy()
+			else:
+				self.path = filename
+				self.destroy()
+				return self.path
+		elif response == Gtk.ResponseType.CANCEL:
+			self.destroy()
+			return self.path
