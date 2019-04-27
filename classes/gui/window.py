@@ -81,25 +81,33 @@ class MainWindow(Gtk.Window):
 		self.hbox_preferences_frames.add(self.label_frames)
 		self.hbox_preferences_frames.add(self.spinbutton_frames)
 		# conectando
-		self.button_record.connect("clicked", self.on_button_record)
-		self.button_stop.connect("clicked", self.on_button_stop)
-		self.button_play.connect("clicked", self.on_button_play)
-		self.button_explore.connect("clicked", self.on_button_explore)
-		self.button_audio_settings.connect("clicked", self.on_button_audio_settings)
+		self.button_record.connect("clicked", self.on_button_record_clicked)
+		self.button_stop.connect("clicked", self.on_button_stop_clicked)
+		self.button_play.connect("clicked", self.on_button_play_clicked)
+		self.button_explore.connect("clicked", self.on_button_explore_clicked)
+		self.button_audio_settings.connect("clicked", self.on_button_audio_settings_clicked)
+		self.check_mouse.connect("toggled", self.on_check_mouse_toggled)
+		self.check_audio.connect("toggled", self.on_check_audio_toggled)
 
-	def on_button_record(self, widget):
+	def on_button_record_clicked(self, widget):
 		pass
 
-	def on_button_stop(self, widget):
+	def on_button_stop_clicked(self, widget):
 		pass
 
-	def on_button_play(self, widget):
+	def on_button_play_clicked(self, widget):
 		pass
 
-	def on_button_explore(self, widget):
+	def on_button_explore_clicked(self, widget):
 		pass
 
-	def on_button_audio_settings(self, widget):
+	def on_button_audio_settings_clicked(self, widget):
+		pass
+
+	def on_check_mouse_toggled(self, widget):
+		pass
+
+	def on_check_audio_toggled(self, widget):
 		pass
 
 class ExplorerWindow(Gtk.FileChooserDialog):
