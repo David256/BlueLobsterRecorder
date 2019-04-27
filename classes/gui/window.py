@@ -3,6 +3,7 @@
 
 import gi
 import os
+import re
 import subprocess
 
 gi.require_version("Gtk", "3.0")
@@ -161,3 +162,51 @@ class ExplorerWindow(Gtk.FileChooserDialog):
 		elif response == Gtk.ResponseType.CANCEL:
 			self.destroy()
 			return self.path
+
+class AudioSettinsWindow(Gtk.Dialog):
+	"""La ventana que pregunta por más información para configurar la grabación de audio."""
+	def __init__(self, parent=None):
+		super(AudioSettinsWindow, self).__init__(
+			title="Configuración de audio",
+			parent=parent,
+			flags=Gtk.DialogFlags.DESTROY_WITH_PARENT)
+		self._audio_devices = set()
+		self.add_button(Gtk.STOCK_OK, Gtk.ResponseType.OK)
+		self.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
+		# configuramos un par de cosas
+		self.set_border_width(10)
+		self.set_default_size(350, 300)
+		# personalizamos este diálogo
+		self.vbox_main = self.get_content_area()
+		self.vbox_devices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+		self.frame = Gtk.Frame()
+		# las cosas se agregan
+		self.vbox_main.add(Gtk.Label("Seleccione el/los dispositivo(s) de audio."))
+		self.vbox_main.add(self.frame)
+		# buscamos los dispositivos de audio
+		for description, name in self._get_audio_devices().items():
+			text = description + "\n"
+			text += "(" + name + ")"
+			check_audio_device = Gtk.CheckButton(text)
+			check_audio_device.connect("toggled", self.on_check_audio_devices_toggled, name)
+			self.vbox_devices.add(check_audio_device)
+		# vamos terminando
+		self.frame.add(self.vbox_devices)
+		self.frame.set_label("los dispositivos:")
+		self.show_all()
+	
+	def _get_audio_devices(self):
+		output = subprocess.check_output(["pacmd", "list-sources"])
+		name_devices = re.findall("name: <(.*)>", output.decode())
+		description_devices = re.findall("device.description = \"(.*)\"", output.decode())
+		return {description: name for description, name in zip(description_devices, name_devices)}
+
+	def on_check_audio_devices_toggled(self, widget, name):
+		if widget.get_active():
+			self._audio_devices.add(name)
+		else:
+			self._audio_devices.remove(name)
+
+	@property
+	def audio_devices(self):
+		return list(self._audio_devices)		
