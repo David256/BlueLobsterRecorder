@@ -89,6 +89,7 @@ class MainWindow(Gtk.Window):
 		self.button_audio_settings.connect("clicked", self.on_button_audio_settings_clicked)
 		self.check_mouse.connect("toggled", self.on_check_mouse_toggled)
 		self.check_audio.connect("toggled", self.on_check_audio_toggled)
+		self.entry_target.connect("changed", self.on_entry_target_changed)
 
 	def on_button_record_clicked(self, widget):
 		pass
@@ -109,6 +110,9 @@ class MainWindow(Gtk.Window):
 		pass
 
 	def on_check_audio_toggled(self, widget):
+		pass
+
+	def on_entry_target_changed(self, widget):
 		pass
 
 class ExplorerWindow(Gtk.FileChooserDialog):
