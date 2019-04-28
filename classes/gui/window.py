@@ -4,6 +4,7 @@
 import gi
 import os
 import re
+import time
 import subprocess
 
 gi.require_version("Gtk", "3.0")
@@ -122,6 +123,7 @@ class ExplorerWindow(Gtk.FileChooserDialog):
 			parent=parent,
 			title="Guardar en:",
 			action=Gtk.FileChooserAction.SAVE)
+		self.logger = parent.logger
 		self.path = None
 		self.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
 		self.add_button(Gtk.STOCK_SAVE_AS, Gtk.ResponseType.OK)
@@ -133,6 +135,7 @@ class ExplorerWindow(Gtk.FileChooserDialog):
 		self.add_filter(self.filter_text)
 
 	def explore(self):
+		self.logger.info("Se pide explorar")
 		response = self.run()
 		if response == Gtk.ResponseType.OK:
 			filename = self.get_filename()
@@ -174,6 +177,7 @@ class AudioSettinsWindow(Gtk.Dialog):
 			title="Configuración de audio",
 			parent=parent,
 			flags=Gtk.DialogFlags.DESTROY_WITH_PARENT)
+		self.logger = parent.logger
 		self._audio_devices = set()
 		self.add_button(Gtk.STOCK_OK, Gtk.ResponseType.OK)
 		self.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
@@ -191,6 +195,7 @@ class AudioSettinsWindow(Gtk.Dialog):
 		for description, name in self._get_audio_devices().items():
 			text = description + "\n"
 			text += "(" + name + ")"
+			self.logger.debug("Obtenido: "  + text)
 			check_audio_device = Gtk.CheckButton(text)
 			check_audio_device.connect("toggled", self.on_check_audio_devices_toggled, name)
 			self.vbox_devices.add(check_audio_device)
@@ -213,4 +218,86 @@ class AudioSettinsWindow(Gtk.Dialog):
 
 	@property
 	def audio_devices(self):
-		return list(self._audio_devices)		
+		return list(self._audio_devices)
+
+class ProgressWindow(Gtk.Dialog):
+	"""La ventana que muestra qué tal va el procesamiento de los archivos"""
+	def __init__(self, parent):
+		super(ProgressWindow, self).__init__(
+			self,
+			parent=parent,
+			title="Procesando archivos...",
+			flags=Gtk.DialogFlags.DESTROY_WITH_PARENT)
+		self.logger = parent.logger
+		self.process = None
+		self.std = None
+		self.cancelled = False
+		self.re_duration = re.compile(r"Duration: (\d\d):(\d\d):(\d\d(\.\d\d))")
+		self.re_time = re.compile(r"time=(\d\d):(\d\d):(\d\d\.\d\d)")
+		# agregamos un botón
+		self.add_button(Gtk.STOCK_STOP, Gtk.ResponseType.CANCEL)
+		# configuramos un par de cosas
+		self.set_border_width(10)
+		self.set_default_size(350, 100)
+		# personalizamos este diálogo
+		self.vbox_main = self.get_content_area()
+		self.progress = Gtk.ProgressBar()
+		self.label_info = Gtk.Label()
+		# las cosas se agregan
+		self.vbox_main.add(self.label_info)
+		self.vbox_main.add(self.progress)
+		self.show_all()
+
+	def check(self, process, std, info):
+		self.logger.debug("Nuevo trabajo para: " + info)
+		self.process = process
+		self.std = std
+		duration = -1
+		self.label_info.set_text(info)
+		self.progress.set_fraction(0.0)
+		buffer = str()
+		while self.process.poll() is None:
+			content = self.std.read()
+			content = content.decode()
+			content = content.replace("\r", "\n")
+			if content:
+				buffer += content
+				if duration < 0:
+					matched = self.re_duration.search(buffer)
+					if matched:
+						numbers = list(matched.groups())[:3]
+						numbers.reverse()
+						duration = sum([float(number)*(60**i) for i,number in enumerate(numbers)])
+						self.logger.debug("La duration: " + str(duration))
+
+						# revisamos el otro a ver
+						matched = self.re_time.search(buffer)
+						if matched:
+							GLib.idle_add(self.update_progress, fraction=1.0)
+							self.logger.debug("Ya estaba finalizado")
+							break
+
+					continue
+				#self.logger.debug("La duration: " + str(duration))
+				if duration > 0:
+					matched = self.re_time.findall(buffer)
+					matched.reverse()
+					matched = matched[:-1]
+					if matched:
+						numbers = list(matched[0])[:3]
+						numbers.reverse()
+						time = sum([float(number)*(60**i) for i,number in enumerate(numbers)])
+						fraction = time / duration
+						self.logger.debug("Valor time: " + str(time) + " > " + str(numbers) + " = " + str(fraction))
+						GLib.idle_add(self.update_progress, fraction)
+				buffer = buffer[:-50]
+		return self.process.poll()
+
+	def cancel(self):
+		# cancela el actual proceso
+		self.logger.info("Se cancela el progreso")
+		self.process.terminate()
+		self.cancelled = True
+
+	def update_progress(self, fraction):
+		self.progress.set_fraction(fraction)
