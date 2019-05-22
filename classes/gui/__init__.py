@@ -93,7 +93,7 @@ class GUI(MainWindow):
 		self.logger.info("Se para la grabación")
 		progress_window = ProgressWindow(self)
 		filename = tempfile.mktemp()
-		self.logger.debug("El std temporal: "+ filename)
+		self.logger.debug("El std temporal: " + filename)
 		if not self.recorder:
 			message_dialog = Gtk.MessageDialog(
 				parent=self,
@@ -113,6 +113,11 @@ class GUI(MainWindow):
 			self.logger.debug("Iniciamos el procesador general")
 			try:
 				for info, process, std in self.recorder.mix(filename):
+					if progress_window.destroyed or progress_window.cancelled:
+						self.logger.info("Se ha cancelado el ciclo de mezclas")
+						self.logger.info("a) destroyed: " + str(progress_window.destroyed))
+						self.logger.info("a) cancelled: " + str(progress_window.cancelled))
+						break
 					self.logger.debug("info: " + info)
 					if process is None and std is None:
 						self.logger.info("Fin del procesamiento")
@@ -129,7 +134,7 @@ class GUI(MainWindow):
 								use_markup=False,
 								type=Gtk.MessageType.ERROR,
 								buttons=Gtk.ButtonsType.OK,
-								modal=not True)
+								modal=False)
 							message_dialog.format_secondary_text("No se ha podido completar la mezcla en: " + info)
 							response = message_dialog.run()
 							message_dialog.destroy()
@@ -147,11 +152,12 @@ class GUI(MainWindow):
 				message_dialog.format_secondary_text(str(e))
 				response = message_dialog.run()
 				message_dialog.destroy()
-				progress_window.process.terminate()
+				if progress_window.process:
+					progress_window.process.terminate()
 			finally:
 				self.logger.info("Finalizaaaaaaado el procesamiento")
-				if not progress_window.cancelled:
-					progress_window.destroy() # BUG
+				if not progress_window.destroyed or not progress_window.cancelled:
+					progress_window.response(Gtk.ResponseType.NONE)
 
 		thread = threading.Thread(target=_, name="processer", args=(progress_window, filename,))
 		thread.start()
@@ -159,6 +165,9 @@ class GUI(MainWindow):
 		if response == Gtk.ResponseType.CANCEL:
 			self.logger.info("Usuario canceló el procesamiento")
 			progress_window.cancel()
+			progress_window.destroy()
+		if not progress_window.destroyed:
+			self.logger.info("No se había hecho destroy a progress_window, ahora sí")
 			progress_window.destroy()
 		thread.join(0)
 		# volvemos todo a la normalidad
