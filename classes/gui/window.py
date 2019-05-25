@@ -232,6 +232,7 @@ class ProgressWindow(Gtk.Dialog):
 		self.process = None
 		self.std = None
 		self.cancelled = False
+		self.destroyed = False
 		self.re_duration = re.compile(r"Duration: (\d\d):(\d\d):(\d\d(\.\d\d))")
 		self.re_time = re.compile(r"time=(\d\d):(\d\d):(\d\d\.\d\d)")
 		# agregamos un botón
@@ -246,7 +247,12 @@ class ProgressWindow(Gtk.Dialog):
 		# las cosas se agregan
 		self.vbox_main.add(self.label_info)
 		self.vbox_main.add(self.progress)
+		# agregamos un conector a eventos
+		self.connect("destroy", self._destroy_callback)
 		self.show_all()
+
+	def _destroy_callback(self, widget):
+		self.destroyed = True
 
 	def check(self, process, std, info):
 		self.logger.debug("Nuevo trabajo para: " + info)
